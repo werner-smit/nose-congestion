@@ -2,17 +2,21 @@
 from __future__ import absolute_import, print_function
 
 import operator
-import os
 from functools import wraps
 from inspect import ismodule
 from time import time
 
 from nose.plugins import Plugin
 
+# @TODO: Remove hard coded formatting and allow TIMED_METHODS to drive the
+# columns to display
+
 
 class CongestionPlugin(Plugin):
     """Measure total test execution time"""
     name = 'congestion'
+
+    TIMED_METHODS = ('setUp', 'tearDown', 'setup_class', 'teardown_class')
 
     def __init__(self):
         super(CongestionPlugin, self).__init__()
@@ -39,24 +43,18 @@ class CongestionPlugin(Plugin):
 
         return wrapped
 
-    def options(self, parser, env=os.environ):
-        super(CongestionPlugin, self).options(parser, env=env)
-
-    def configure(self, options, conf):
-        super(CongestionPlugin, self).configure(options, conf)
-        if not self.enabled:
-            return
-
     def startContext(self, context):
+        # Initialise zeroed context timing dict
+        ctx = {k: 0 for k in self.TIMED_METHODS}
+        ctx['total'] = 0
         ctx_name = self.name_for_obj(context)
-        self.elapsed_times[ctx_name] = ctx = {'total': 0, 'setUp': 0,
-                                              'tearDown': 0}
+        self.elapsed_times[ctx_name] = ctx
 
-        if hasattr(context, 'setUp'):
-            for k in ('setUp', 'tearDown'):
-                old_f = getattr(context, k)
-                new_f = self.record_elapsed_decorator(old_f, ctx, k)
-                setattr(context, k, new_f)
+        for method_name in self.TIMED_METHODS:
+            if hasattr(context, method_name):
+                old_f = getattr(context, method_name)
+                new_f = self.record_elapsed_decorator(old_f, ctx, method_name)
+                setattr(context, method_name, new_f)
 
         self.start_times[context] = time()
 
@@ -92,11 +90,11 @@ class CongestionPlugin(Plugin):
         self._register_time(test)
 
     def report(self, stream):
-        print("%-43s %8s %8s %8s" % ('Location', 'Total', 'setUp', 'tearDown'),
+        print("%-43s %10s %10s %10s %10s" % ('Location', 'Total', 'setup_class', 'teardown_class' 'setUp', 'tearDown'),
               file=stream)
         print('-' * 70, file=stream)
 
-        fmt = "{0:43s} {total:>8.3f} {setUp:>8.3f} {tearDown:>8.3f}"
+        fmt = "{0:43s} {total:>10.3f} {setup_class:>10.3f} {teardown_class:>10.3f} {setUp:>10.3f} {tearDown:>10.3f}"
         for context_name in sorted(self.elapsed_times.keys()):
             times = self.elapsed_times[context_name]
             print(fmt.format(context_name, **times), file=stream)

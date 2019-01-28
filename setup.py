@@ -9,7 +9,7 @@ from setuptools import setup
 ROOT = os.path.dirname(__file__)
 
 setup(name='nose-congestion',
-      version='0.0.3',
+      version='0.0.4',
       author='Chris Adams',
       author_email='chris@improbable.org',
       url='http://github.com/acdha/nose-congestion',
