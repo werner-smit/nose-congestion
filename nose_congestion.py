@@ -3,14 +3,24 @@ from __future__ import absolute_import, print_function
 
 import operator
 from functools import wraps
-from inspect import ismodule
+from inspect import ismodule, getargspec
 from time import time
+from functools import partial
 
 from nose.plugins import Plugin
 
+def isclassmethod(f):
+    """
+    Basic check for classmethod in python 2.7. For python 3 we don't care,
+    because no special handling is required to decorate  setup_class
+    unboundmethods.
+    """
+    if hasattr(f, '__self__') and isinstance(f.__self__, type):
+        return True
+    return False
+
 # @TODO: Remove hard coded formatting and allow TIMED_METHODS to drive the
 # columns to display
-
 
 class CongestionPlugin(Plugin):
     """Measure total test execution time"""
@@ -35,13 +45,22 @@ class CongestionPlugin(Plugin):
         @wraps(f)
         def wrapped(*args, **kwargs):
             start_time = time()
+            # Workaround, because nosetests manupulates the function args when
+            # calling this method.  We have to put the cls as the 1st argument
+            # to call the classmethod, but then pop of when we do tthe
+            # underlying method call.  To see why his is needed look at: nose/util.py:471
+            if isclassmethod(f):
+                args = tuple(list(args)[1:])
 
             try:
                 return f(*args, **kwargs)
             finally:
                 ctx[key_name] = time() - start_time
 
-        return wrapped
+        if isclassmethod(f):
+            return partial(wrapped, f.__self__)
+        else:
+            return wrapped
 
     def startContext(self, context):
         # Initialise zeroed context timing dict
