@@ -9,6 +9,7 @@ from functools import partial
 
 from nose.plugins import Plugin
 
+
 def isclassmethod(f):
     """
     Basic check for classmethod in python 2.7. For python 3 we don't care,
@@ -21,6 +22,7 @@ def isclassmethod(f):
 
 # @TODO: Remove hard coded formatting and allow TIMED_METHODS to drive the
 # columns to display
+
 
 class CongestionPlugin(Plugin):
     """Measure total test execution time"""
@@ -45,10 +47,10 @@ class CongestionPlugin(Plugin):
         @wraps(f)
         def wrapped(*args, **kwargs):
             start_time = time()
-            # Workaround, because nosetests manupulates the function args when
+            # Workaround because nosetests manupulates the function args when
             # calling this method.  We have to put the cls as the 1st argument
             # to call the classmethod, but then pop of when we do tthe
-            # underlying method call.  To see why his is needed look at: nose/util.py:471
+            # underlying method call. To see why this is needed look at: nose/util.py:471
             if isclassmethod(f):
                 args = tuple(list(args)[1:])
 
@@ -109,14 +111,25 @@ class CongestionPlugin(Plugin):
         self._register_time(test)
 
     def report(self, stream):
-        print("%-43s %10s %10s %10s %10s" % ('Location', 'Total', 'setup_class', 'teardown_class' 'setUp', 'tearDown'),
+        max_loc_width = 100
+        loc_width = 43
+        if self.elapsed_times:
+            loc_width = len(sorted(self.elapsed_times.keys(), key=lambda x: len(x), reverse=True)[0])
+
+        # Limit 
+        if loc_width > max_loc_width:
+            loc_width = max_loc_width
+
+        print("{:{loc_width}s} {:>15s} {:>15s} {:>15s} {:>15s} {:>15s}".format(
+            'Location', 'Total', 'setup_class', 'teardown_class', 'setUp', 'tearDown', loc_width=loc_width),
               file=stream)
         print('-' * 70, file=stream)
 
-        fmt = "{0:43s} {total:>10.3f} {setup_class:>10.3f} {teardown_class:>10.3f} {setUp:>10.3f} {tearDown:>10.3f}"
+        fmt = "{0:{loc_width}s} {total:>15.3f} {setup_class:>15.3f} {teardown_class:>15.3f} {setUp:>15.3f} {tearDown:>15.3f}"
         for context_name in sorted(self.elapsed_times.keys()):
             times = self.elapsed_times[context_name]
-            print(fmt.format(context_name, **times), file=stream)
+            context_name = context_name[:max_loc_width] if len(context_name) > max_loc_width else context_name
+            print(fmt.format(context_name, loc_width=loc_width, **times), file=stream)
 
         print(file=stream)
         print("%7s  %-60s" % ('Total', 'Location'), file=stream)
