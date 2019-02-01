@@ -22,8 +22,6 @@ def isclassmethod(f):
 
 # @TODO: Remove hard coded formatting and allow TIMED_METHODS to drive the
 # columns to display
-
-
 class CongestionPlugin(Plugin):
     """Measure total test execution time"""
     name = 'congestion'
@@ -44,6 +42,12 @@ class CongestionPlugin(Plugin):
             return "%s.%s" % (i.__module__, i.__name__)
 
     def record_elapsed_decorator(self, f, ctx, key_name):
+        # Modifying a class persists onto subclasses as well.
+        # We don't have to decorate the subclass if the parent
+        # has already been decorated. 
+        if isinstance(f, partial):
+            return f
+
         @wraps(f)
         def wrapped(*args, **kwargs):
             start_time = time()

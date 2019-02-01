@@ -38,6 +38,10 @@ class SmokeTests(PluginTester, unittest.TestCase):
         assert True
 
 
+class SubSmokeTests(SmokeTests):
+    def test_planet(self):
+        assert True
+
 class TestVeryLonGClassNameToExceedMaxLengthThisWouldHaveToBeVeryLongToDoThatAtThisPointItStillIsnt(PluginTester, unittest.TestCase):
     activate = '--with-congestion'
     plugins = [nose_congestion.CongestionPlugin()]    
